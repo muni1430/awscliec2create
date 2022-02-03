@@ -3,13 +3,13 @@ node('main'){
         sh "aws --version"
     }
     stage('create an ec2instance'){
-      sh "aws ec2 run-instances --image-id ami-04505e74c0741db8d --count 1 --instance-type t2.micro --key-name newawskey  --security-group-ids sg-01361c1aff01f515a --subnet-id subnet-03a83a9c26a79aeec --user-data file://userdata.sh--region us-east-1"
+      sh "aws ec2 run-instances --image-id ami-04505e74c0741db8d --count 1 --instance-type t2.micro --key-name newawskey  --security-group-ids sg-01361c1aff01f515a --subnet-id subnet-03a83a9c26a79aeec --region us-east-1"
     }
     stage('create rds'){
-    sh "aws rds create-db-instance --db-instance-identifier test-mysql-instance6 --db-instance-class db.t2.micro --engine mysql --master-username admin --master-user-password muni1234 --allocated-storage 10 --region us-east-1"
+    sh "aws rds create-db-instance --db-instance-identifier test-mysql-instancess --db-instance-class db.t2.micro --engine mysql --master-username admin --master-user-password muni1234 --allocated-storage 10 --region us-east-1"
 }
  stage('Launch configuration'){
-        sh "aws autoscaling create-launch-configuration --launch-configuration-name mylaunchcfg --image-id ami-04505e74c0741db8d --instance-type t2.micro --security-groups sg-01361c1aff01f515a --key-name " + newawskey + " --userdata \$'" + userdata + "' --region us-east-1"
+        sh "aws autoscaling create-launch-configuration --launch-configuration-name mylaunchcfg --image-id ami-04505e74c0741db8d --instance-type t2.micro --security-groups sg-01361c1aff01f515a --key-name " + newawskey + " --user-data file://userdata.sh --region us-east-1"
     }
     stage('Auto scaling'){
         sh "aws autoscaling create-auto-scaling-group --auto-scaling-group-name myautoscaling --launch-configuration-name mylaunchcfg --max-size 2 --min-size 1 --availability-zones us-east-1a --region us-east-1"
