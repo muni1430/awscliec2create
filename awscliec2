@@ -1,5 +1,5 @@
 node('main'){
-stages{
+
     stage('AWS CLI Version'){
         sh "aws --version"
     }
@@ -8,7 +8,6 @@ stages{
     }
     stage('create rds'){
     sh "aws rds create-db-instance --db-instance-identifier test-mysql-instance --db-instance-class db.t2.micro --engine mysql --master-username admin --master-user-password muni1234 --allocated-storage 10"
-}
 }
 }
 
