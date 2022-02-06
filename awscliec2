@@ -1,18 +1,36 @@
-node('main'){
-    stage('AWS CLI Version'){
-        sh "aws --version"
-    }
-    stage('create an ec2instance'){
-      sh "aws ec2 run-instances --image-id ami-04505e74c0741db8d --count 1 --instance-type t2.micro --key-name newawskey  --security-group-ids sg-01361c1aff01f515a --subnet-id subnet-03a83a9c26a79aeec --region us-east-1"
-    }
-    stage('create rds'){
-    sh "aws rds create-db-instance --db-instance-identifier test-mysql-instan44 --db-instance-class db.t2.micro --engine mysql --master-username admin --master-user-password muni1234 --allocated-storage 10 --region us-east-1"
+pipeline{
+  agent {label 'main'}
+    stages{
+       stage('hosting application'){
+        steps{
+          sh "ls"
+          sh "aws rds create-db-instance --db-instance-identifier test-mysql-instan44 --db-instance-class db.t2.micro --engine mysql --master-username admin --master-user-password muni1234 --allocated-storage 10 --region us-east-1"
+          sleep(450)
+          script{
+              def cmd = "aws rds describe-db-instances --db-instance-identifier test-mysql-instance --region us-east-1"
+              def output = sh(script: cmd,returnStdout: true)
+              jsonitem = readJSON text: output
+              println(jsonitem)
+           }
+           sh "sudo sed -i.bak 's/endpoint/${jsonitem['DBInstances'][0]['Endpoint']['Address']}/g' userdata.txt"
+          script{
+              def cmd = "aws elbv2 create-load-balancer --name my-load-balancer --subnets subnet-03a83a9c26a79aeec --security-groups sg-01361c1aff01f515a --region us-east-1 "
+              def output = sh(script: cmd,returnStdout: true)
+              jsonitem1 = readJSON text: output
+              println(jsonitem1)
+              sleep(100)
+            }
+          script{
+              def cmd = "aws elbv2 create-target-group --name my-targets --protocol HTTP --port 80 --target-type instance --vpc-id vpc-0a77a4c6898363932 --region us-east-1"
+              def output = sh(script: cmd,returnStdout: true)
+              jsonitem2 = readJSON text: output
+              println(jsonitem2)
+              sleep(180)
+               }
+           sh "aws elbv2 create-listener --load-balancer-arn ${jsonitem1['LoadBalancers'][0]['LoadBalancerArn']} --protocol HTTP --port 80 --default-actions Type=forward,TargetGroupArn=${jsonitem2['TargetGroups'][0]['TargetGroupArn']} --region us-east-1"
+           sh "aws autoscaling create-launch-configuration --launch-configuration-name my-launchconfig-cli --image-id ami-04505e74c0741db8d --instance-type t2.micro --security-groups sg-01361c1aff01f515a --key-name newawskey --iam-instance-profile myiam_role --user-data file://userdata.txt --region us-east-1"
+           sh "aws autoscaling create-auto-scaling-group --auto-scaling-group-name my-asg3-cli --launch-configuration-name my-launchconfig-cli --max-size 2 --min-size 1 --desired-capacity 1 --target-group-arns ${jsonitem2['TargetGroups'][0]['TargetGroupArn']} --availability-zones us-east-1a --region us-east-1"
+        }
+       }
+  }
 }
- stage('Launch configuration'){
-        sh "aws autoscaling create-launch-configuration --launch-configuration-name mylaunchcfg --image-id ami-04505e74c0741db8d --instance-type t2.micro --security-groups sg-01361c1aff01f515a --key-name " + newawskey + " --user-data file://userdata.txt --region us-east-1"
-    }
-    stage('Auto scaling'){
-        sh "aws autoscaling create-auto-scaling-group --auto-scaling-group-name myautoscaling --launch-configuration-name mylaunchcfg --max-size 2 --min-size 1 --availability-zones us-east-1a --region us-east-1"
-	}
-}
-
