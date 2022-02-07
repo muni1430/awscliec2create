@@ -5,7 +5,7 @@ pipeline{
         steps{
           sh "ls"
           sh "aws rds create-db-instance --db-instance-identifier test-mysql-instan976 --db-instance-class db.t2.micro --engine mysql --master-username admin --master-user-password muni1234 --allocated-storage 10 --region us-east-1"
-          sleep(100)
+          sleep(360)
           script{
               def cmd = "aws rds describe-db-instances --db-instance-identifier test-mysql-instan976 --region us-east-1"
               def output = sh(script: cmd,returnStdout: true)
